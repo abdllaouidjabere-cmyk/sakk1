@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAKK | Stateless Cryptographic Certification</title>
+    <meta name="description" content="Enterprise-grade document integrity platform. Zero-disk retention, ECDSA secp256r1 verification.">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+    <style>
+        /* Enterprise Design System Tokens */
+        :root {
+            --bg-app: #090d16;
+            --bg-panel: #0f172a;
+            --bg-input: #1e293b;
+            --border: #1e293b;
+            --border-hover: #334155;
+            
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-code: #cbd5e1;
+            
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-muted: rgba(37, 99, 235, 0.15);
+            
+            --success: #10b981;
+            --success-muted: rgba(16, 185, 129, 0.15);
+            
+            --danger: #ef4444;
+            --danger-muted: rgba(239, 68, 68, 0.15);
+            
+            --font-sans: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
+            
+            --transition: 0.15s ease-in-out;
+        }
+
+        /* Reset & Base */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            line-height: 1.5;
+            font-size: 14px;
+            -webkit-font-smoothing: antialiased;
+        }
+        a { color: var(--primary); text-decoration: none; transition: color var(--transition); }
+        a:hover { color: var(--primary-hover); }
+        button { font-family: inherit; cursor: pointer; }
+        input, textarea { font-family: inherit; }
+
+        /* Typography */
+        h1, h2, h3 { font-weight: 600; letter-spacing: -0.01em; color: var(--text-main); }
+        .mono { font-family: var(--font-mono); font-size: 13px; color: var(--text-code); }
+        
+        /* Layout */
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+        
+        /* Topbar */
+        .topbar {
+            border-bottom: 1px solid var(--border);
+            background-color: var(--bg-app);
+            padding: 12px 0;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .topbar .container { display: flex; justify-content: space-between; align-items: center; }
+        .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; }
+        .brand svg { color: var(--primary); }
+        .auth-controls { display: flex; align-items: center; gap: 16px; font-size: 13px; }
+        
+        /* Hero Section */
+        .hero { padding: 48px 0 32px; border-bottom: 1px solid var(--border); margin-bottom: 32px; }
+        .hero-title { font-size: 24px; margin-bottom: 8px; }
+        .hero-desc { color: var(--text-muted); font-size: 14px; max-width: 600px; margin-bottom: 24px; }
+        .specs-grid {
+            display: flex; gap: 24px;
+            font-family: var(--font-mono); font-size: 12px;
+            color: var(--text-muted);
+        }
+        .spec-item { display: flex; flex-direction: column; gap: 4px; }
+        .spec-val { color: var(--text-main); font-weight: 500; }
+
+        /* Grid System */
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+
+        /* Panels */
+        .panel {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            position: relative;
+            display: flex; flex-direction: column;
+        }
+        .panel-header { margin-bottom: 20px; }
+        .panel-title { font-size: 15px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+        .panel-desc { font-size: 13px; color: var(--text-muted); }
+
+        /* Form Elements */
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 8px; }
+        .input-base {
+            width: 100%;
+            background-color: var(--bg-app);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-main);
+            padding: 8px 12px;
+            font-size: 13px;
+            transition: border-color var(--transition);
+        }
+        .input-base:focus { outline: none; border-color: var(--primary); }
+        textarea.input-base { min-height: 80px; resize: vertical; font-family: var(--font-mono); font-size: 12px; }
+
+        /* Dropzone */
+        .dropzone {
+            border: 1px dashed var(--border-hover);
+            border-radius: var(--radius-sm);
+            padding: 24px 16px;
+            text-align: center;
+            background-color: rgba(30, 41, 59, 0.3);
+            cursor: pointer;
+            transition: all var(--transition);
+            position: relative;
+            margin-bottom: 16px;
+        }
+        .dropzone:hover, .dropzone.dragover { border-color: var(--primary); background-color: var(--primary-muted); }
+        .dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .dropzone-icon { color: var(--text-muted); margin-bottom: 8px; }
+        .dropzone-text { font-size: 13px; color: var(--text-muted); }
+        .dropzone-file { font-family: var(--font-mono); font-size: 12px; color: var(--primary); margin-top: 8px; word-break: break-all; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            background: transparent; border: 1px solid transparent;
+            border-radius: var(--radius-sm);
+            padding: 8px 16px; font-size: 13px; font-weight: 500;
+            transition: all var(--transition);
+            width: 100%;
+        }
+        .btn-primary { background-color: var(--primary); color: #fff; border-color: var(--primary); }
+        .btn-primary:hover:not(:disabled) { background-color: var(--primary-hover); border-color: var(--primary-hover); }
+        .btn-secondary { background-color: var(--bg-input); color: var(--text-main); border-color: var(--border); }
+        .btn-secondary:hover:not(:disabled) { border-color: var(--border-hover); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Loaders */
+        .loader {
+            display: none; align-items: center; justify-content: center; gap: 8px;
+            font-size: 12px; color: var(--text-muted);
+            margin-top: 12px;
+        }
+        .spinner {
+            width: 14px; height: 14px;
+            border: 2px solid var(--border-hover);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Output & Alerts */
+        .result-box {
+            display: none;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+        .alert {
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 12px; border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            font-size: 13px; font-weight: 500; margin-bottom: 16px;
+        }
+        .alert-success { background-color: var(--success-muted); border-color: var(--success); color: var(--success); }
+        .alert-danger { background-color: var(--danger-muted); border-color: var(--danger); color: var(--danger); }
+        
+        .kv-list { display: flex; flex-direction: column; gap: 12px; }
+        .kv-item { display: flex; flex-direction: column; gap: 4px; }
+        .kv-key { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .kv-val {
+            background-color: var(--bg-app); border: 1px solid var(--border);
+            padding: 8px; border-radius: var(--radius-sm);
+            font-family: var(--font-mono); font-size: 12px; color: var(--text-code);
+            word-break: break-all;
+        }
+
+        /* PDF Stamping Area */
+        .pdf-engine {
+            display: none;
+            border: 1px solid var(--border); border-radius: var(--radius-sm);
+            background: #cbd5e1; /* Needs to be light for PDF rendering visibility */
+            position: relative; overflow: hidden; margin-bottom: 16px;
+        }
+        .pdf-toolbar {
+            background: var(--bg-panel); border-bottom: 1px solid var(--border);
+            padding: 8px 12px; display: flex; justify-content: space-between;
+            font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+        }
+        #pdfCanvas { display: block; width: 100%; height: auto; }
+        #qrBadge {
+            position: absolute; top: 12px; left: 12px;
+            width: 80px; height: 80px;
+            border: 1px solid var(--primary);
+            background: rgba(255,255,255,0.85);
+            cursor: grab; resize: both; overflow: hidden;
+            min-width: 40px; min-height: 40px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #qrBadge:active { cursor: grabbing; }
+        #qrBadge::after {
+            content: 'QR Target';
+            font-family: var(--font-mono); font-size: 10px; color: var(--primary);
+        }
+
+        /* Checkbox */
+        .checkbox-wrap {
+            display: flex; align-items: flex-start; gap: 8px;
+            font-size: 12px; color: var(--text-muted); cursor: pointer; margin-bottom: 16px;
+        }
+        .checkbox-wrap input { margin-top: 2px; accent-color: var(--primary); }
+
+        /* Lock Overlay (Auth) */
+        .lock-overlay {
+            position: absolute; inset: 0; z-index: 10;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(4px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+            border-radius: var(--radius-lg);
+        }
+
+        /* Audit Ledger */
+        .ledger { margin-top: 24px; margin-bottom: 64px; }
+        .ledger-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .table-wrap {
+            border: 1px solid var(--border); border-radius: var(--radius-md);
+            overflow-x: auto; background-color: var(--bg-panel);
+        }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th {
+            padding: 12px 16px; border-bottom: 1px solid var(--border);
+            font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase;
+        }
+        td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+        tr:last-child td { border-bottom: none; }
+        
+        /* Camera UI */
+        .camera-ui { display: none; margin-bottom: 16px; }
+        .video-wrap {
+            position: relative; width: 100%; aspect-ratio: 4/3;
+            background: #000; border: 1px solid var(--border); border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+        .video-wrap video { width: 100%; height: 100%; object-fit: cover; }
+        .video-wrap .crosshair {
+            position: absolute; inset: 0; pointer-events: none;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .crosshair::before {
+            content: ''; width: 200px; height: 200px;
+            border: 1px solid rgba(255,255,255,0.4); border-radius: 8px;
+        }
+
+        /* Auth Modal */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 500;
+            background: rgba(9, 13, 22, 0.8); backdrop-filter: blur(4px);
+            align-items: center; justify-content: center;
+        }
+        .modal {
+            background: var(--bg-panel); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); width: 100%; max-width: 380px;
+            padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+        .modal-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+        .modal-tab {
+            flex: 1; padding: 8px 0; background: none; border: none; color: var(--text-muted);
+            font-size: 13px; font-weight: 500; border-bottom: 1px solid transparent; margin-bottom: -1px;
+        }
+        .modal-tab.active { color: var(--text-main); border-bottom-color: var(--primary); }
+        .modal-view { display: none; }
+        .modal-view.active { display: block; }
+        .modal-err { color: var(--danger); font-size: 12px; margin-top: 8px; display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+        <div class="container">
+            <div class="brand">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                SAKK Platform
+            </div>
+            <div class="auth-controls">
+                <span id="userBadge" class="mono" style="display:none; color:var(--text-muted);"></span>
+                <button class="btn btn-secondary" style="width:auto; padding:4px 12px;" id="btnAuth" onclick="toggleModal(true)">Authenticate</button>
+                <button class="btn btn-secondary" style="width:auto; padding:4px 12px; display:none;" id="btnLogout" onclick="logout()">Terminate Session</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- HERO -->
+        <section class="hero">
+            <h1 class="hero-title">Cryptographic Document Certification</h1>
+            <p class="hero-desc">High-assurance document integrity platform. Issues ECDSA-signed certificates with zero-disk retention architecture. Audited via immutable SQLite ledger.</p>
+            <div class="specs-grid">
+                <div class="spec-item"><span class="spec-val">ECDSA secp256r1</span><span>Algorithm</span></div>
+                <div class="spec-item"><span class="spec-val">SHA-256</span><span>Digest Function</span></div>
+                <div class="spec-item"><span class="spec-val">Stateless</span><span>Storage Policy</span></div>
+                <div class="spec-item"><span class="spec-val">Active</span><span>Audit Logging</span></div>
+            </div>
+        </section>
+
+        <!-- WORKSPACE -->
+        <section class="workspace-grid">
+            
+            <!-- 1. ISSUE -->
+            <div class="panel">
+                <div class="lock-overlay" id="lockIssue">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted)"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <div style="font-size:13px; color:var(--text-muted)">Authentication Required</div>
+                    <button class="btn btn-primary" style="width:auto;" onclick="toggleModal(true)">Authenticate</button>
+                </div>
+                
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        Issue Certificate
+                    </h2>
+                    <p class="panel-desc">Generate an ECDSA signature and embed a cryptographic QR seal.</p>
+                </div>
+
+                <form id="formSign">
+                    <div class="dropzone" id="dropSign">
+                        <input type="file" id="fileSign" required>
+                        <svg class="dropzone-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <div class="dropzone-text">Select file for certification</div>
+                        <div class="dropzone-file" id="nameSign"></div>
+                    </div>
+
+                    <!-- Dynamic Metadata Builder -->
+                    <div id="metaBuilder" style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                Seal Metadata
+                            </div>
+                            <button type="button" class="btn btn-secondary" style="width: auto; padding: 3px 10px; font-size: 11px; gap: 4px;" onclick="addMetaField()">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                Add Field
+                            </button>
+                        </div>
+
+                        <div id="metaFields">
+                            <!-- Default fields - user can remove these too -->
+                        </div>
+
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 10px; display: flex; align-items: center; gap: 6px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                            <span>Zero-Retention: Metadata is embedded only in the cryptographic signature and QR seal. Nothing is stored on the server.</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label class="form-label">QR Code Color</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="color" id="qrColor" value="#000000" style="width: 32px; height: 32px; border: none; cursor: pointer; background: transparent; padding: 0;">
+                            <span style="font-size: 11px; color: var(--text-muted);">Transparent background is applied automatically.</span>
+                        </div>
+                    </div>
+
+                    <div class="pdf-engine" id="pdfEngine">
+                        <div class="pdf-toolbar">
+                            <span>PDF Renderer Active</span>
+                            <span id="pdfMetrics">X: 0% | Y: 0% | Scale: 20%</span>
+                        </div>
+                        <div style="position:relative;">
+                            <canvas id="pdfCanvas"></canvas>
+                            <div id="qrBadge"></div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="btnSubmitSign">Execute Signature</button>
+                    
+                    <div class="loader" id="loadSign">
+                        <div class="spinner"></div> Generating Digest & Signature...
+                    </div>
+                </form>
+
+                <div class="result-box" id="resSign">
+                    <div class="alert alert-success">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Certification executed successfully.
+                    </div>
+                    <div class="kv-list">
+                        <div class="kv-item" id="itemSignMeta" style="display:none;">
+                            <span class="kv-key">Sealed Metadata</span>
+                            <div class="kv-val" id="outMetaSign" style="font-family: var(--font-sans); color: #fff; line-height: 1.7;"></div>
+                        </div>
+                        <div class="kv-item">
+                            <span class="kv-key">SHA-256 Digest</span>
+                            <div class="kv-val" id="outHashSign"></div>
+                        </div>
+                        <div class="kv-item">
+                            <span class="kv-key">ECDSA Signature (Base64)</span>
+                            <div class="kv-val" id="outSigSign"></div>
+                        </div>
+                        <div style="display:flex; gap:12px; margin-top:8px;">
+                            <a id="dlQr" class="btn btn-secondary" href="#" download="SAKK-seal.png">Export QR Seal</a>
+                            <a id="dlPdf" class="btn btn-secondary" href="#" style="display:none;" download="SAKK-stamped.pdf">Export Stamped PDF</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. VERIFY FILE -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        Verify File Integrity
+                    </h2>
+                    <p class="panel-desc">Upload a document to automatically scan its QR seal and verify its cryptographic integrity.</p>
+                </div>
+
+                <form id="formVerify">
+                    <div class="dropzone" id="dropVerify">
+                        <input type="file" id="fileVerify" required>
+                        <svg class="dropzone-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                        <div class="dropzone-text">Select original file</div>
+                        <div class="dropzone-file" id="nameVerify"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-secondary" id="btnSubmitVerify">Verify Cryptogram</button>
+                    
+                    <div class="loader" id="loadVerify">
+                        <div class="spinner"></div> Scanning for QR seal & computing verification matrix...
+                    </div>
+                </form>
+
+                <div class="result-box" id="resVerify">
+                    <div class="alert" id="alertVerify"></div>
+                    <div class="kv-list">
+                        <div class="kv-item" id="itemVerifyMeta" style="display:none;">
+                            <span class="kv-key">Sealed Metadata</span>
+                            <div class="kv-val" id="outMetaVerify" style="font-family: var(--font-sans); color: #fff; line-height: 1.7;"></div>
+                        </div>
+                        <div class="kv-item">
+                            <span class="kv-key">Document SHA-256 Digest</span>
+                            <div class="kv-val" id="outHashVerify"></div>
+                        </div>
+                        <div class="kv-item" id="itemVerifyPage" style="display:none;">
+                            <span class="kv-key">QR Seal Location</span>
+                            <div class="kv-val" id="outPageVerify"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. SCAN SEAL -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                        Scan QR Seal
+                    </h2>
+                    <p class="panel-desc">Decode and verify embedded QR payloads from images or PDFs.</p>
+                </div>
+
+                <div style="display:flex; gap:8px; margin-bottom:16px;">
+                    <button class="btn btn-secondary" style="border-color:var(--primary)" id="tabQrUpload" onclick="setQrMode('upload')">File Upload</button>
+                    <button class="btn btn-secondary" id="tabQrCam" onclick="setQrMode('cam')">Live Camera</button>
+                </div>
+
+                <!-- Upload Mode -->
+                <form id="formQr">
+                    <div class="dropzone" id="dropQr">
+                        <input type="file" id="fileQr" accept="image/*,.pdf" required>
+                        <svg class="dropzone-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        <div class="dropzone-text">Select PNG, JPG, or PDF</div>
+                        <div class="dropzone-file" id="nameQr"></div>
+                    </div>
+                    <button type="submit" class="btn btn-secondary" id="btnSubmitQr">Extract & Verify Payload</button>
+                </form>
+
+                <!-- Camera Mode -->
+                <div class="camera-ui" id="uiCamera">
+                    <div class="video-wrap">
+                        <video id="vidCam" autoplay playsinline muted></video>
+                        <canvas id="canCam" style="display:none;"></canvas>
+                        <div class="crosshair"></div>
+                    </div>
+                    <div style="font-size:12px; color:var(--text-muted); text-align:center; margin-top:8px;" id="camStatus">Awaiting video stream...</div>
+                </div>
+
+                <div class="loader" id="loadQr">
+                    <div class="spinner"></div> Decoding and verifying payload...
+                </div>
+
+                <div class="result-box" id="resQr">
+                    <div class="alert" id="alertQr"></div>
+                    <div class="kv-list">
+                        <div class="kv-item" id="qrMetaContainer" style="display:none;">
+                            <span class="kv-key">Decoded Seal Metadata</span>
+                            <div class="kv-val" id="outMetaQr" style="font-family: var(--font-sans); color: #fff; line-height: 1.7;"></div>
+                        </div>
+                        <div class="kv-item">
+                            <span class="kv-key">Source Filename</span>
+                            <div class="kv-val" id="outNameQr" style="color:var(--text-main); font-family:var(--font-sans)"></div>
+                        </div>
+                        <div class="kv-item">
+                            <span class="kv-key">Logged Timestamp</span>
+                            <div class="kv-val" id="outTsQr"></div>
+                        </div>
+                        <div class="kv-item">
+                            <span class="kv-key">Embedded SHA-256 Digest</span>
+                            <div class="kv-val" id="outHashQr"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- AUDIT LEDGER -->
+        <section class="ledger">
+            <div class="ledger-header">
+                <h2 class="panel-title" style="margin:0;">Audit Log Ledger</h2>
+                <button class="btn btn-secondary" style="width:auto; padding:6px 12px; font-size:12px;" onclick="fetchLogs()">Sync Ledger</button>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:60px">ID</th>
+                            <th>Target File</th>
+                            <th>SHA-256 Digest (Truncated)</th>
+                            <th>Signature State</th>
+                            <th style="text-align:right">UTC Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tblLogs">
+                        <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:24px;">Authentication required to view audit ledger.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- AUTH MODAL -->
+    <div class="modal-overlay" id="modAuth">
+        <div class="modal">
+            <div class="modal-tabs">
+                <button class="modal-tab active" onclick="setAuthTab('login')">Authenticate</button>
+                <button class="modal-tab" onclick="setAuthTab('register')">Provision Account</button>
+            </div>
+            
+            <form id="formLogin" class="modal-view active">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="inLUser" class="input-base" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="inLPass" class="input-base" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top:8px;">Sign In</button>
+                <div class="modal-err" id="errLogin">Authentication failed.</div>
+            </form>
+
+            <form id="formReg" class="modal-view">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" id="inRUser" class="input-base" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" id="inREmail" class="input-base" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="inRPass" class="input-base" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top:8px;">Create Account</button>
+                <div class="modal-err" id="errReg">Registration failed.</div>
+            </form>
+
+            <form id="formOtp" class="modal-view">
+                <div class="form-group">
+                    <label class="form-label">Email Verification Code</label>
+                    <input type="text" id="inOtp" class="input-base" placeholder="Enter 6-digit code" required style="font-family: var(--font-mono); letter-spacing: 2px; text-align: center; font-size: 16px;">
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top:8px;">Verify Code</button>
+                <div class="modal-err" id="errOtp">Invalid code.</div>
+            </form>
+        </div>
+    </div>
+
+    <!-- APPLICATION LOGIC -->
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        const $ = id => document.getElementById(id);
+        let isPdfStamping = false;
+        let camStream = null;
+        let animFrame = null;
+
+        // UI Utils
+        const iconSuccess = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+        const iconError = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+
+        function setAlert(elId, isSuccess, msg) {
+            const el = $(elId);
+            el.className = `alert ${isSuccess ? 'alert-success' : 'alert-danger'}`;
+            el.innerHTML = `${isSuccess ? iconSuccess : iconError} <span>${msg}</span>`;
+        }
+
+        // Dropzone Logic
+        function bindDropzone(inputId, dropId, nameId, onFile) {
+            const inp = $(inputId), drop = $(dropId), name = $(nameId);
+            const update = (f) => {
+                if(!f) return;
+                name.textContent = f.name;
+                drop.style.borderColor = 'var(--primary)';
+                if(onFile) onFile(f);
+            };
+            inp.addEventListener('change', e => update(e.target.files[0]));
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => e.preventDefault()));
+            ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, () => drop.classList.add('dragover')));
+            ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('dragover')));
+            drop.addEventListener('drop', e => {
+                const dt = new DataTransfer();
+                if(e.dataTransfer.files[0]) {
+                    dt.items.add(e.dataTransfer.files[0]);
+                    inp.files = dt.files;
+                    update(dt.files[0]);
+                }
+            });
+        }
+
+        // PDF Rendering & Drag
+        bindDropzone('fileSign', 'dropSign', 'nameSign', async (file) => {
+            const engine = $('pdfEngine');
+            if (file.type === 'application/pdf') {
+                isPdfStamping = true;
+                engine.style.display = 'block';
+                const ab = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+                const page = await pdf.getPage(1);
+                const vp = page.getViewport({ scale: 1.2 });
+                const canvas = $('pdfCanvas');
+                canvas.width = vp.width; canvas.height = vp.height;
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+                updatePdfMetrics();
+            } else {
+                isPdfStamping = false;
+                engine.style.display = 'none';
+            }
+        });
+
+        const badge = $('qrBadge');
+        let drag = { active: false, ox: 0, oy: 0 };
+        badge.addEventListener('mousedown', e => {
+            if (e.clientX > badge.getBoundingClientRect().right - 15 && e.clientY > badge.getBoundingClientRect().bottom - 15) return; // Allow native resize
+            drag = { active: true, ox: e.clientX - badge.offsetLeft, oy: e.clientY - badge.offsetTop };
+            e.preventDefault();
+        });
+        window.addEventListener('mousemove', e => {
+            if (!drag.active) return;
+            const pw = $('pdfCanvas').offsetWidth, ph = $('pdfCanvas').offsetHeight;
+            let x = Math.max(0, Math.min(e.clientX - drag.ox, pw - badge.offsetWidth));
+            let y = Math.max(0, Math.min(e.clientY - drag.oy, ph - badge.offsetHeight));
+            badge.style.left = x + 'px'; badge.style.top = y + 'px';
+            updatePdfMetrics();
+        });
+        window.addEventListener('mouseup', () => drag.active = false);
+        new ResizeObserver(updatePdfMetrics).observe(badge);
+
+        function updatePdfMetrics() {
+            if(!isPdfStamping) return;
+            const pw = $('pdfCanvas').offsetWidth || 1;
+            const px = Math.round((badge.offsetLeft / pw) * 100);
+            const py = Math.round((badge.offsetTop / $('pdfCanvas').offsetHeight) * 100);
+            const ps = Math.round((badge.offsetWidth / pw) * 100);
+            $('pdfMetrics').textContent = `X: ${px}% | Y: ${py}% | Scale: ${ps}%`;
+        }
+
+        bindDropzone('fileVerify', 'dropVerify', 'nameVerify');
+        bindDropzone('fileQr', 'dropQr', 'nameQr');
+
+        // Auth Logic
+        async function checkSession() {
+            try {
+                const d = await (await fetch('/api/me')).json();
+                if (d.logged_in) {
+                    $('lockIssue').style.display = 'none';
+                    $('btnAuth').style.display = 'none';
+                    $('btnLogout').style.display = 'block';
+                    $('userBadge').style.display = 'block';
+                    $('userBadge').textContent = d.username;
+                    fetchLogs();
+                } else {
+                    $('lockIssue').style.display = 'flex';
+                    $('btnAuth').style.display = 'block';
+                    $('btnLogout').style.display = 'none';
+                    $('userBadge').style.display = 'none';
+                }
+            } catch (e) {}
+        }
+        
+        window.toggleModal = (show) => {
+            $('modAuth').style.display = show ? 'flex' : 'none';
+            if(show) {
+                document.querySelector('.modal-tabs').style.display = 'flex';
+                setAuthTab('login');
+            }
+        };
+        $('modAuth').addEventListener('click', e => { if(e.target === $('modAuth')) toggleModal(false); });
+        
+        window.setAuthTab = (t) => {
+            document.querySelectorAll('.modal-tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.modal-view').forEach(el => el.classList.remove('active'));
+            
+            if (t === 'login') {
+                document.querySelectorAll('.modal-tab')[0].classList.add('active');
+                $('formLogin').classList.add('active');
+            } else if (t === 'register') {
+                document.querySelectorAll('.modal-tab')[1].classList.add('active');
+                $('formReg').classList.add('active');
+            } else if (t === 'otp') {
+                $('formOtp').classList.add('active');
+                document.querySelector('.modal-tabs').style.display = 'none';
+            }
+        };
+
+        $('formLogin').addEventListener('submit', async e => {
+            e.preventDefault();
+            const res = await fetch('/api/login', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ username: $('inLUser').value, password: $('inLPass').value })
+            });
+            const d = await res.json();
+            if (d.success) {
+                if (d.requires_otp) {
+                    setAuthTab('otp');
+                } else {
+                    toggleModal(false); checkSession();
+                }
+            } else { $('errLogin').style.display = 'block'; }
+        });
+
+        $('formReg').addEventListener('submit', async e => {
+            e.preventDefault();
+            const res = await fetch('/api/register', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ username: $('inRUser').value, email: $('inREmail').value, password: $('inRPass').value })
+            });
+            const d = await res.json();
+            if (d.success) {
+                if (d.requires_otp) {
+                    setAuthTab('otp');
+                } else {
+                    toggleModal(false); checkSession();
+                }
+            } else { $('errReg').textContent = d.error || 'Provisioning failed.'; $('errReg').style.display = 'block'; }
+        });
+
+        $('formOtp').addEventListener('submit', async e => {
+            e.preventDefault();
+            const res = await fetch('/api/verify-otp', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ otp: $('inOtp').value })
+            });
+            const d = await res.json();
+            if (d.success) {
+                toggleModal(false); checkSession();
+            } else {
+                $('errOtp').textContent = d.error || 'Invalid code.'; $('errOtp').style.display = 'block';
+            }
+        });
+
+        window.logout = async () => { await fetch('/api/logout', { method: 'POST' }); checkSession(); };
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ── Dynamic Metadata Builder ──
+        let metaFieldCounter = 0;
+
+        window.addMetaField = (key = '', value = '') => {
+            const id = metaFieldCounter++;
+            const row = document.createElement('div');
+            row.id = `mf-${id}`;
+            row.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 28px; gap:6px; margin-bottom:6px; align-items:center;';
+            row.innerHTML = `
+                <input type="text" class="input-base" placeholder="Field name" value="${escapeHtml(key)}" data-mk="${id}">
+                <input type="text" class="input-base" placeholder="Value" value="${escapeHtml(value)}" data-mv="${id}">
+                <button type="button" onclick="removeMetaField(${id})" style="background:none; border:none; color:var(--danger); cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; opacity:0.7; transition:opacity 0.15s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.7">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>`;
+            $('metaFields').appendChild(row);
+        };
+
+        window.removeMetaField = (id) => {
+            const el = document.getElementById(`mf-${id}`);
+            if (el) el.remove();
+        };
+
+        function collectMetadata() {
+            const fields = [];
+            const container = $('metaFields');
+            if (!container) return fields;
+            container.querySelectorAll('[data-mk]').forEach(inp => {
+                const id = inp.getAttribute('data-mk');
+                const key = inp.value.trim();
+                const valInp = container.querySelector(`[data-mv="${id}"]`);
+                const value = valInp ? valInp.value.trim() : '';
+                if (key && value) fields.push({ key, value });
+            });
+            return fields;
+        }
+
+        function renderMetadataHtml(metaList) {
+            if (!metaList || !metaList.length) return '';
+            return metaList.map(m =>
+                `<div style="margin-bottom:3px;"><span style="color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.03em;">${escapeHtml(m.key)}:</span> <strong style="color:#38bdf8;">${escapeHtml(m.value)}</strong></div>`
+            ).join('');
+        }
+
+        // Add default fields on load
+        addMetaField('Signer Name', '');
+        addMetaField('Document Type', '');
+
+        // ── Sign Handler ──
+        $('formSign').addEventListener('submit', async e => {
+            e.preventDefault();
+            const file = $('fileSign').files[0];
+            if (!file) return;
+
+            $('btnSubmitSign').disabled = true;
+            $('loadSign').style.display = 'flex';
+            $('resSign').style.display = 'none';
+
+            const metadata = collectMetadata();
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('base_url', window.location.origin);
+            fd.append('metadata', JSON.stringify(metadata));
+            fd.append('qr_color', $('qrColor').value);
+
+            if (isPdfStamping) {
+                const pw = $('pdfCanvas').offsetWidth, ph = $('pdfCanvas').offsetHeight;
+                fd.append('stamp_pdf', 'true');
+                fd.append('x_pct', badge.offsetLeft / pw);
+                fd.append('y_pct', badge.offsetTop / ph);
+                fd.append('size_pct', badge.offsetWidth / pw);
+            }
+
+            try {
+                const res = await fetch('/api/sign', { method: 'POST', body: fd });
+                if (res.status === 401) return toggleModal(true);
+                const d = await res.json();
+
+                if (d.error) throw new Error(d.error);
+
+                const metaHtml = renderMetadataHtml(d.metadata);
+                if (metaHtml) {
+                    $('outMetaSign').innerHTML = metaHtml;
+                    $('itemSignMeta').style.display = 'flex';
+                } else {
+                    $('itemSignMeta').style.display = 'none';
+                }
+
+                $('outHashSign').textContent = d.hash;
+                $('outSigSign').textContent = d.signature;
+                $('dlQr').href = d.qr_image;
+                if (d.stamped_pdf) {
+                    $('dlPdf').style.display = 'flex';
+                    $('dlPdf').href = 'data:application/pdf;base64,' + d.stamped_pdf;
+                } else {
+                    $('dlPdf').style.display = 'none';
+                }
+                $('resSign').style.display = 'block';
+                fetchLogs();
+            } catch (err) { alert(`Execution Error: ${err.message}`); }
+            finally { $('btnSubmitSign').disabled = false; $('loadSign').style.display = 'none'; }
+        });
+
+        // ── Verify Handler ──
+        $('formVerify').addEventListener('submit', async e => {
+            e.preventDefault();
+            const file = $('fileVerify').files[0];
+            if (!file) return;
+
+            $('btnSubmitVerify').disabled = true;
+            $('loadVerify').style.display = 'flex';
+            $('resVerify').style.display = 'none';
+
+            const fd = new FormData();
+            fd.append('file', file);
+
+            try {
+                const res = await fetch('/api/verify', { method: 'POST', body: fd });
+                const d = await res.json();
+                
+                if (!res.ok) {
+                    throw new Error(d.error || 'Verification failed');
+                }
+
+                setAlert('alertVerify', d.valid, d.valid ? 'Cryptographic validation succeeded. Integrity preserved.' : 'Signature verification failed: digest mismatch or forged blob.');
+                
+                if (d.payload) {
+                    $('outHashVerify').textContent = d.payload.hash || d.hash;
+                    
+                    const metaHtml = renderMetadataHtml(d.payload.metadata);
+                    if (metaHtml) {
+                        $('outMetaVerify').innerHTML = metaHtml;
+                        $('itemVerifyMeta').style.display = 'flex';
+                    } else {
+                        $('itemVerifyMeta').style.display = 'none';
+                    }
+                } else {
+                    $('outHashVerify').textContent = d.hash;
+                }
+
+                if (d.page) {
+                    $('outPageVerify').textContent = `Found on Page ${d.page}`;
+                    $('itemVerifyPage').style.display = 'flex';
+                } else {
+                    $('itemVerifyPage').style.display = 'none';
+                }
+
+                $('resVerify').style.display = 'block';
+            } catch (err) { 
+                setAlert('alertVerify', false, err.message);
+                $('outHashVerify').textContent = 'N/A';
+                $('itemVerifyMeta').style.display = 'none';
+                $('itemVerifyPage').style.display = 'none';
+                $('resVerify').style.display = 'block';
+            }
+            finally { $('btnSubmitVerify').disabled = false; $('loadVerify').style.display = 'none'; }
+        });
+        // ── QR Scanner Logic ──
+        window.setQrMode = (mode) => {
+            stopCam();
+            if (mode === 'upload') {
+                $('formQr').style.display = 'block';
+                $('uiCamera').style.display = 'none';
+                $('tabQrUpload').style.borderColor = 'var(--primary)';
+                $('tabQrCam').style.borderColor = 'var(--border)';
+            } else {
+                $('formQr').style.display = 'none';
+                $('uiCamera').style.display = 'block';
+                $('tabQrUpload').style.borderColor = 'var(--border)';
+                $('tabQrCam').style.borderColor = 'var(--primary)';
+                startCam();
+            }
+        };
+
+        $('formQr').addEventListener('submit', async e => {
+            e.preventDefault();
+            const file = $('fileQr').files[0];
+            if (!file) return;
+
+            $('btnSubmitQr').disabled = true;
+            $('loadQr').style.display = 'flex';
+            $('resQr').style.display = 'none';
+
+            const fd = new FormData(); fd.append('file', file);
+            try {
+                const res = await fetch('/api/verify-qr', { method: 'POST', body: fd });
+                const d = await res.json();
+                renderQrResult(res.status === 200, d);
+            } catch (err) { alert(`Decoding Error: ${err.message}`); }
+            finally { $('btnSubmitQr').disabled = false; $('loadQr').style.display = 'none'; }
+        });
+
+        async function startCam() {
+            $('resQr').style.display = 'none';
+            $('camStatus').textContent = 'Acquiring video stream...';
+            try {
+                camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                const vid = $('vidCam');
+                vid.srcObject = camStream;
+                vid.onloadedmetadata = () => scanFrame();
+                $('camStatus').textContent = 'Stream active. Seeking QR payload...';
+            } catch (e) { $('camStatus').textContent = 'Camera initialization failed.'; }
+        }
+
+        function stopCam() {
+            if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+            if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+        }
+
+        function scanFrame() {
+            const vid = $('vidCam'), can = $('canCam');
+            if (!camStream || vid.readyState < 2) return animFrame = requestAnimationFrame(scanFrame);
+            can.width = vid.videoWidth; can.height = vid.videoHeight;
+            const ctx = can.getContext('2d');
+            ctx.drawImage(vid, 0, 0);
+            const img = ctx.getImageData(0, 0, can.width, can.height);
+            if (typeof jsQR !== 'undefined') {
+                const qr = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+                if (qr) {
+                    stopCam();
+                    verifyCamPayload(qr.data);
+                    return;
+                }
+            }
+            animFrame = requestAnimationFrame(scanFrame);
+        }
+
+        async function verifyCamPayload(raw) {
+            $('loadQr').style.display = 'flex';
+            try {
+                const res = await fetch('/api/verify-qr-data', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ raw_data: raw })
+                });
+                renderQrResult(true, await res.json());
+            } catch (e) {
+                renderQrResult(false, { error: 'Payload validation exception: Server communication failed.' });
+            } finally {
+                $('loadQr').style.display = 'none';
+            }
+        }
+
+        function renderQrResult(ok, data) {
+            const payload = data.payload || {};
+            const metaList = payload.metadata || [];
+
+            if (metaList.length > 0) {
+                $('qrMetaContainer').style.display = 'flex';
+                $('outMetaQr').innerHTML = renderMetadataHtml(metaList);
+            } else {
+                $('qrMetaContainer').style.display = 'none';
+            }
+
+            if (!ok || data.error) {
+                setAlert('alertQr', false, data.error || 'Validation matrix failure.');
+                $('outNameQr').textContent = payload.filename || 'UNKNOWN';
+                $('outTsQr').textContent = payload.timestamp || 'N/A';
+                $('outHashQr').textContent = payload.hash || 'N/A';
+            } else if (data.valid) {
+                setAlert('alertQr', true, 'Seal authentication passed. Ledger consensus reached.');
+                $('outNameQr').textContent = payload.filename;
+                $('outTsQr').textContent = payload.timestamp;
+                $('outHashQr').textContent = payload.hash;
+            } else {
+                setAlert('alertQr', false, 'Signature verification failed: Unauthorized or tampered payload.');
+                $('outNameQr').textContent = payload.filename;
+                $('outTsQr').textContent = payload.timestamp;
+                $('outHashQr').textContent = payload.hash;
+            }
+            $('resQr').style.display = 'block';
+        }
+
+        // Ledger Logic
+        async function fetchLogs() {
+            const tbody = $('tblLogs');
+            try {
+                const res = await fetch('/api/logs');
+                if (res.status === 401) return;
+                const logs = await res.json();
+                if (!logs.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:24px;">No ledger entries found for active session.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = logs.map(l => `
+                    <tr>
+                        <td class="mono">${l.id}</td>
+                        <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${l.filename}</td>
+                        <td class="mono">${l.hash.substring(0, 16)}...</td>
+                        <td class="mono">${l.signature.substring(0, 16)}...</td>
+                        <td class="mono" style="text-align:right">${l.timestamp}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger); padding:24px;">Ledger sync error.</td></tr>';
+            }
+        }
+
+        // Init
+        checkSession();
+
+    </script>
+</body>
+</html>
