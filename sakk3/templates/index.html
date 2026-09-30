@@ -939,7 +939,11 @@
                     throw new Error(d.error || 'Verification failed');
                 }
 
-                setAlert('alertVerify', d.valid, d.valid ? 'Cryptographic validation succeeded. Integrity preserved.' : 'Signature verification failed: digest mismatch or forged blob.');
+                if (d.warning) {
+                    setAlert('alertVerify', true, d.warning);
+                } else {
+                    setAlert('alertVerify', d.valid, d.valid ? 'Cryptographic validation succeeded. Integrity preserved.' : 'Signature verification failed: digest mismatch or forged blob.');
+                }
                 
                 if (d.payload) {
                     $('outHashVerify').textContent = d.payload.hash || d.hash;
